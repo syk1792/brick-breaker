@@ -1,18 +1,20 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>벽돌깨기 게임</title>
   <style>
     html, body {
       margin: 0;
       padding: 0;
+      width: 100%;
       height: 100%;
       display: flex;
       justify-content: center;
       align-items: center;
       background: #f0f0f0;
+      overflow-x: hidden;
       position: relative;
     }
     canvas {
@@ -39,257 +41,272 @@
   </style>
 </head>
 <body>
-<div id="levelMessage">레벨 업!</div>
-<canvas id="gameCanvas"></canvas>
-<audio id="hitSound" src="https://www.soundjay.com/button/sounds/button-16.mp3" preload="auto"></audio>
-<script>
-const canvas = document.getElementById("gameCanvas");
-const ctx = canvas.getContext("2d");
-const hitSound = document.getElementById("hitSound");
-const levelMessage = document.getElementById("levelMessage");
+  <div id="levelMessage">레벨 업!</div>
+  <canvas id="gameCanvas"></canvas>
+  <audio id="hitSound" src="https://www.soundjay.com/button/sounds/button-16.mp3" preload="auto"></audio>
 
-function resizeCanvas() {
-  const ratio = 3 / 2;
-  const width = Math.min(window.innerWidth, 480);
-  const height = width / ratio;
-  canvas.width = width;
-  canvas.height = height;
-}
-window.addEventListener('resize', resizeCanvas);
-resizeCanvas();
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+    const hitSound = document.getElementById("hitSound");
+    const levelMessage = document.getElementById("levelMessage");
 
-let ballRadius = 10;
-let x = canvas.width / 2;
-let y = canvas.height - 30;
-let dx = 2;
-let dy = -2;
-
-let paddleHeight = 10;
-let paddleWidth = 75;
-let paddleX = (canvas.width - paddleWidth) / 2;
-
-let rightPressed = false;
-let leftPressed = false;
-
-let brickRowCount = 3;
-const brickColumnCount = 5;
-const brickWidth = 75;
-const brickHeight = 20;
-const brickPadding = 10;
-const brickOffsetTop = 30;
-const brickOffsetLeft = 30;
-
-let bricks = [];
-function initBricks() {
-  bricks = [];
-  for (let c = 0; c < brickColumnCount; c++) {
-    bricks[c] = [];
-    for (let r = 0; r < brickRowCount; r++) {
-      bricks[c][r] = { x: 0, y: 0, status: 1 };
+    function resizeCanvas() {
+      const ratio = 3 / 2;
+      const width = Math.min(window.innerWidth, 480);
+      const height = width / ratio;
+      canvas.width = width;
+      canvas.height = height;
     }
-  }
-}
-initBricks();
+    window.addEventListener("resize", resizeCanvas);
+    resizeCanvas();
 
-let score = 0;
-let lives = 3;
-let level = 1;
-let paused = false;
+    let ballRadius = 10;
+    let x = canvas.width / 2;
+    let y = canvas.height - 30;
+    let dx = 2;
+    let dy = -2;
 
-function showLevelMessage(text) {
-  paused = true;
-  levelMessage.textContent = text;
-  levelMessage.style.display = "block";
-  setTimeout(() => {
-    levelMessage.style.display = "none";
-    paused = false;
-    draw();
-  }, 2000);
-}
+    let paddleHeight = 10;
+    let paddleWidth = 75;
+    let paddleX = (canvas.width - paddleWidth) / 2;
 
-function keyDownHandler(e) {
-  if (e.key == "Right" || e.key == "ArrowRight") rightPressed = true;
-  else if (e.key == "Left" || e.key == "ArrowLeft") leftPressed = true;
-}
-function keyUpHandler(e) {
-  if (e.key == "Right" || e.key == "ArrowRight") rightPressed = false;
-  else if (e.key == "Left" || e.key == "ArrowLeft") leftPressed = false;
-}
+    let rightPressed = false;
+    let leftPressed = false;
 
-document.addEventListener("keydown", keyDownHandler);
-document.addEventListener("keyup", keyUpHandler);
-document.addEventListener("touchstart", unlockSound);
+    let brickRowCount = 3;
+    const brickColumnCount = 5;
+    const brickWidth = 75;
+    const brickHeight = 20;
+    const brickPadding = 10;
+    const brickOffsetTop = 30;
+    const brickOffsetLeft = 30;
 
-canvas.addEventListener("touchmove", function(e) {
-  let rect = canvas.getBoundingClientRect();
-  let touchX = e.touches[0].clientX - rect.left;
-  paddleX = touchX - paddleWidth / 2;
-  if (paddleX < 0) paddleX = 0;
-  if (paddleX + paddleWidth > canvas.width) paddleX = canvas.width - paddleWidth;
-});
-
-function isAllBricksCleared() {
-  for (let c = 0; c < brickColumnCount; c++) {
-    for (let r = 0; r < brickRowCount; r++) {
-      if (bricks[c][r].status === 1) {
-        return false;
-      }
-    }
-  }
-  return true;
-}
-
-function collisionDetection() {
-  for (let c = 0; c < brickColumnCount; c++) {
-    for (let r = 0; r < brickRowCount; r++) {
-      let b = bricks[c][r];
-      if (b.status == 1) {
-        if (x > b.x && x < b.x + brickWidth && y > b.y && y < b.y + brickHeight) {
-          dy = -dy;
-          b.status = 0;
-          score++;
-          hitSound.currentTime = 0;
-          hitSound.play();
+    let bricks = [];
+    function initBricks() {
+      bricks = [];
+      for (let c = 0; c < brickColumnCount; c++) {
+        bricks[c] = [];
+        for (let r = 0; r < brickRowCount; r++) {
+          bricks[c][r] = { x: 0, y: 0, status: 1 };
         }
       }
     }
-  }
-
-  if (isAllBricksCleared()) {
-    level++;
-    score = 0;
-    dx *= 1.2;
-    dy *= 1.2;
-    paddleWidth = Math.max(30, paddleWidth - 10);
-    brickRowCount = Math.min(6, brickRowCount + 1);
     initBricks();
-    changeBackground(level);
-    x = canvas.width / 2;
-    y = canvas.height - 30;
-    paddleX = (canvas.width - paddleWidth) / 2;
-    showLevelMessage("레벨 " + level + " 진입! 난이도 증가!");
-  }
-}
 
-function drawBall() {
-  ctx.beginPath();
-  ctx.arc(x, y, ballRadius, 0, Math.PI * 2);
-  ctx.fillStyle = "#0095DD";
-  ctx.fill();
-  ctx.closePath();
-}
-function drawPaddle() {
-  ctx.beginPath();
-  ctx.rect(paddleX, canvas.height - paddleHeight, paddleWidth, paddleHeight);
-  ctx.fillStyle = "#0095DD";
-  ctx.fill();
-  ctx.closePath();
-}
-function drawBricks() {
-  for (let c = 0; c < brickColumnCount; c++) {
-    for (let r = 0; r < brickRowCount; r++) {
-      if (bricks[c][r].status == 1) {
-        let brickX = c * (brickWidth + brickPadding) + brickOffsetLeft;
-        let brickY = r * (brickHeight + brickPadding) + brickOffsetTop;
-        bricks[c][r].x = brickX;
-        bricks[c][r].y = brickY;
+    let score = 0;
+    let lives = 3;
+    let level = 1;
+    let paused = false;
 
-        ctx.beginPath();
-        ctx.rect(brickX, brickY, brickWidth, brickHeight);
-        ctx.fillStyle = "#ff6347";
-        ctx.strokeStyle = "#b22222";
-        ctx.lineWidth = 2;
-        ctx.fill();
-        ctx.stroke();
-        ctx.closePath();
-
-        ctx.beginPath();
-        ctx.moveTo(brickX, brickY);
-        ctx.lineTo(brickX + brickWidth, brickY);
-        ctx.strokeStyle = "#ffffff88";
-        ctx.lineWidth = 1;
-        ctx.stroke();
-        ctx.closePath();
-      }
+    function showLevelMessage(text) {
+      paused = true;
+      levelMessage.textContent = text;
+      levelMessage.style.display = "block";
+      setTimeout(() => {
+        levelMessage.style.display = "none";
+        paused = false;
+        draw();
+      }, 2000);
     }
-  }
-}
-function drawScore() {
-  ctx.font = "16px Arial";
-  ctx.fillStyle = "#000";
-  ctx.fillText("Score: " + score, 8, 20);
-}
-function drawLives() {
-  ctx.font = "16px Arial";
-  ctx.fillStyle = "#000";
-  ctx.fillText("Lives: " + lives, canvas.width - 65, 20);
-}
-function changeBackground(level) {
-  const bg = [
-    "linear-gradient(to bottom, #fefcea, #f1da36)",
-    "linear-gradient(to bottom, #d0eaff, #66ccff)",
-    "linear-gradient(to bottom, #ffe0e0, #ff6666)",
-    "linear-gradient(to bottom, #e0ffe0, #66ff66)",
-    "linear-gradient(to bottom, #f0e0ff, #cc66ff)"
-  ];
-  const index = (level - 1) % bg.length;
-  canvas.style.background = bg[index];
-}
-function draw() {
-  if (paused) return;
 
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  drawBricks();
-  drawBall();
-  drawPaddle();
-  drawScore();
-  drawLives();
-  collisionDetection();
+    function keyDownHandler(e) {
+      if (e.key == "Right" || e.key == "ArrowRight") rightPressed = true;
+      else if (e.key == "Left" || e.key == "ArrowLeft") leftPressed = true;
+    }
+    function keyUpHandler(e) {
+      if (e.key == "Right" || e.key == "ArrowRight") rightPressed = false;
+      else if (e.key == "Left" || e.key == "ArrowLeft") leftPressed = false;
+    }
 
-  if (x + dx > canvas.width - ballRadius || x + dx < ballRadius) dx = -dx;
-  if (y + dy < ballRadius) dy = -dy;
-  else if (y + dy > canvas.height - ballRadius) {
-    if (x > paddleX && x < paddleX + paddleWidth) {
-      dy = -dy;
-    } else {
-      lives--;
-      if (!lives) {
-        alert("Game Over");
-        document.location.reload();
-      } else {
+    document.addEventListener("keydown", keyDownHandler);
+    document.addEventListener("keyup", keyUpHandler);
+    document.addEventListener("touchstart", unlockSound);
+
+    canvas.addEventListener("touchmove", function (e) {
+      let rect = canvas.getBoundingClientRect();
+      let touchX = e.touches[0].clientX - rect.left;
+      paddleX = touchX - paddleWidth / 2;
+      if (paddleX < 0) paddleX = 0;
+      if (paddleX + paddleWidth > canvas.width) paddleX = canvas.width - paddleWidth;
+    });
+
+    function isAllBricksCleared() {
+      for (let c = 0; c < brickColumnCount; c++) {
+        for (let r = 0; r < brickRowCount; r++) {
+          if (bricks[c][r].status === 1) {
+            return false;
+          }
+        }
+      }
+      return true;
+    }
+
+    function collisionDetection() {
+      for (let c = 0; c < brickColumnCount; c++) {
+        for (let r = 0; r < brickRowCount; r++) {
+          let b = bricks[c][r];
+          if (b.status == 1) {
+            if (
+              x > b.x &&
+              x < b.x + brickWidth &&
+              y > b.y &&
+              y < b.y + brickHeight
+            ) {
+              dy = -dy;
+              b.status = 0;
+              score++;
+              hitSound.currentTime = 0;
+              hitSound.play();
+            }
+          }
+        }
+      }
+
+      if (isAllBricksCleared()) {
+        level++;
+        score = 0;
+        dx *= 1.2;
+        dy *= 1.2;
+        paddleWidth = Math.max(30, paddleWidth - 10);
+        brickRowCount = Math.min(6, brickRowCount + 1);
+        initBricks();
+        changeBackground(level);
         x = canvas.width / 2;
         y = canvas.height - 30;
-        dx = 2;
-        dy = -2;
         paddleX = (canvas.width - paddleWidth) / 2;
+        showLevelMessage("레벨 " + level + " 진입! 난이도 증가!");
       }
     }
-  }
 
-  if (rightPressed && paddleX < canvas.width - paddleWidth) paddleX += 7;
-  else if (leftPressed && paddleX > 0) paddleX -= 7;
+    function drawBall() {
+      ctx.beginPath();
+      ctx.arc(x, y, ballRadius, 0, Math.PI * 2);
+      ctx.fillStyle = "#0095DD";
+      ctx.fill();
+      ctx.closePath();
+    }
 
-  x += dx;
-  y += dy;
-  requestAnimationFrame(draw);
-}
+    function drawPaddle() {
+      ctx.beginPath();
+      ctx.rect(paddleX, canvas.height - paddleHeight, paddleWidth, paddleHeight);
+      ctx.fillStyle = "#0095DD";
+      ctx.fill();
+      ctx.closePath();
+    }
 
-let soundUnlocked = false;
-function unlockSound() {
-  if (!soundUnlocked) {
-    hitSound.play().then(() => {
-      hitSound.pause();
-      hitSound.currentTime = 0;
-      soundUnlocked = true;
-    }).catch(() => {});
-  }
-}
-document.addEventListener("keydown", unlockSound);
-document.addEventListener("touchstart", unlockSound);
+    function drawBricks() {
+      for (let c = 0; c < brickColumnCount; c++) {
+        for (let r = 0; r < brickRowCount; r++) {
+          if (bricks[c][r].status == 1) {
+            let brickX = c * (brickWidth + brickPadding) + brickOffsetLeft;
+            let brickY = r * (brickHeight + brickPadding) + brickOffsetTop;
+            bricks[c][r].x = brickX;
+            bricks[c][r].y = brickY;
 
-changeBackground(level);
-draw();
-</script>
+            ctx.beginPath();
+            ctx.rect(brickX, brickY, brickWidth, brickHeight);
+            ctx.fillStyle = "#ff6347";
+            ctx.strokeStyle = "#b22222";
+            ctx.lineWidth = 2;
+            ctx.fill();
+            ctx.stroke();
+            ctx.closePath();
+
+            ctx.beginPath();
+            ctx.moveTo(brickX, brickY);
+            ctx.lineTo(brickX + brickWidth, brickY);
+            ctx.strokeStyle = "#ffffff88";
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            ctx.closePath();
+          }
+        }
+      }
+    }
+
+    function drawScore() {
+      ctx.font = "16px Arial";
+      ctx.fillStyle = "#000";
+      ctx.fillText("Score: " + score, 8, 20);
+    }
+
+    function drawLives() {
+      ctx.font = "16px Arial";
+      ctx.fillStyle = "#000";
+      ctx.fillText("Lives: " + lives, canvas.width - 65, 20);
+    }
+
+    function changeBackground(level) {
+      const bg = [
+        "linear-gradient(to bottom, #fefcea, #f1da36)",
+        "linear-gradient(to bottom, #d0eaff, #66ccff)",
+        "linear-gradient(to bottom, #ffe0e0, #ff6666)",
+        "linear-gradient(to bottom, #e0ffe0, #66ff66)",
+        "linear-gradient(to bottom, #f0e0ff, #cc66ff)",
+      ];
+      const index = (level - 1) % bg.length;
+      canvas.style.background = bg[index];
+    }
+
+    function draw() {
+      if (paused) return;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawBricks();
+      drawBall();
+      drawPaddle();
+      drawScore();
+      drawLives();
+      collisionDetection();
+
+      if (x + dx > canvas.width - ballRadius || x + dx < ballRadius) dx = -dx;
+      if (y + dy < ballRadius) dy = -dy;
+      else if (y + dy > canvas.height - ballRadius) {
+        if (x > paddleX && x < paddleX + paddleWidth) {
+          dy = -dy;
+        } else {
+          lives--;
+          if (!lives) {
+            alert("Game Over");
+            document.location.reload();
+          } else {
+            x = canvas.width / 2;
+            y = canvas.height - 30;
+            dx = 2;
+            dy = -2;
+            paddleX = (canvas.width - paddleWidth) / 2;
+          }
+        }
+      }
+
+      if (rightPressed && paddleX < canvas.width - paddleWidth) paddleX += 7;
+      else if (leftPressed && paddleX > 0) paddleX -= 7;
+
+      x += dx;
+      y += dy;
+      requestAnimationFrame(draw);
+    }
+
+    let soundUnlocked = false;
+    function unlockSound() {
+      if (!soundUnlocked) {
+        hitSound
+          .play()
+          .then(() => {
+            hitSound.pause();
+            hitSound.currentTime = 0;
+            soundUnlocked = true;
+          })
+          .catch(() => {});
+      }
+    }
+
+    document.addEventListener("keydown", unlockSound);
+    document.addEventListener("touchstart", unlockSound);
+
+    changeBackground(level);
+    draw();
+  </script>
 </body>
 </html>
-
