@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ko">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -10,18 +10,19 @@
       padding: 0;
       width: 100%;
       height: 100%;
+      overflow-x: hidden;
+      background: #f0f0f0;
       display: flex;
       justify-content: center;
       align-items: center;
-      background: #f0f0f0;
-      overflow-x: hidden;
+      flex-direction: column;
       position: relative;
     }
     canvas {
       display: block;
-      width: 100%;
-      height: auto;
+      width: 100vw;
       max-width: 480px;
+      height: auto;
       border: 1px solid #000;
       background: linear-gradient(to bottom, #fefcea, #f1da36);
     }
@@ -38,18 +39,64 @@
       display: none;
       z-index: 10;
     }
+    #rotateTip {
+      display: none;
+      position: absolute;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.6);
+      color: #fff;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 14px;
+      z-index: 15;
+    }
+    @media (orientation: portrait) {
+      #rotateTip {
+        display: block;
+      }
+    }
+    #fullscreenBtn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: #007bff;
+      color: white;
+      padding: 8px 12px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      z-index: 20;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
+  <div id="rotateTip">📱 가로모드로 돌리면 더 넓게 볼 수 있어요!</div>
+  <button id="fullscreenBtn">전체화면</button>
   <div id="levelMessage">레벨 업!</div>
   <canvas id="gameCanvas"></canvas>
-  <audio id="hitSound" src="https://www.soundjay.com/button/sounds/button-16.mp3" preload="auto"></audio>
+  <audio id="hitSound" preload="auto">
+    <source src="https://www.soundjay.com/button/sounds/button-16.mp3" type="audio/mpeg">
+  </audio>
 
   <script>
     const canvas = document.getElementById("gameCanvas");
     const ctx = canvas.getContext("2d");
     const hitSound = document.getElementById("hitSound");
     const levelMessage = document.getElementById("levelMessage");
+    const fullscreenBtn = document.getElementById("fullscreenBtn");
+
+    fullscreenBtn.addEventListener("click", () => {
+      if (canvas.requestFullscreen) {
+        canvas.requestFullscreen();
+      } else if (canvas.webkitRequestFullscreen) {
+        canvas.webkitRequestFullscreen();
+      } else if (canvas.msRequestFullscreen) {
+        canvas.msRequestFullscreen();
+      }
+    });
 
     function resizeCanvas() {
       const ratio = 3 / 2;
@@ -58,6 +105,7 @@
       canvas.width = width;
       canvas.height = height;
     }
+
     window.addEventListener("resize", resizeCanvas);
     resizeCanvas();
 
@@ -111,17 +159,19 @@
     }
 
     function keyDownHandler(e) {
-      if (e.key == "Right" || e.key == "ArrowRight") rightPressed = true;
-      else if (e.key == "Left" || e.key == "ArrowLeft") leftPressed = true;
+      if (e.key === "Right" || e.key === "ArrowRight") rightPressed = true;
+      else if (e.key === "Left" || e.key === "ArrowLeft") leftPressed = true;
     }
+
     function keyUpHandler(e) {
-      if (e.key == "Right" || e.key == "ArrowRight") rightPressed = false;
-      else if (e.key == "Left" || e.key == "ArrowLeft") leftPressed = false;
+      if (e.key === "Right" || e.key === "ArrowRight") rightPressed = false;
+      else if (e.key === "Left" || e.key === "ArrowLeft") leftPressed = false;
     }
 
     document.addEventListener("keydown", keyDownHandler);
     document.addEventListener("keyup", keyUpHandler);
-    document.addEventListener("touchstart", unlockSound);
+    document.addEventListener("click", unlockSound, { once: true });
+    document.addEventListener("touchstart", unlockSound, { once: true });
 
     canvas.addEventListener("touchmove", function (e) {
       let rect = canvas.getBoundingClientRect();
@@ -134,9 +184,7 @@
     function isAllBricksCleared() {
       for (let c = 0; c < brickColumnCount; c++) {
         for (let r = 0; r < brickRowCount; r++) {
-          if (bricks[c][r].status === 1) {
-            return false;
-          }
+          if (bricks[c][r].status === 1) return false;
         }
       }
       return true;
@@ -146,7 +194,7 @@
       for (let c = 0; c < brickColumnCount; c++) {
         for (let r = 0; r < brickRowCount; r++) {
           let b = bricks[c][r];
-          if (b.status == 1) {
+          if (b.status === 1) {
             if (
               x > b.x &&
               x < b.x + brickWidth &&
@@ -198,7 +246,7 @@
     function drawBricks() {
       for (let c = 0; c < brickColumnCount; c++) {
         for (let r = 0; r < brickRowCount; r++) {
-          if (bricks[c][r].status == 1) {
+          if (bricks[c][r].status === 1) {
             let brickX = c * (brickWidth + brickPadding) + brickOffsetLeft;
             let brickY = r * (brickHeight + brickPadding) + brickOffsetTop;
             bricks[c][r].x = brickX;
@@ -243,10 +291,9 @@
         "linear-gradient(to bottom, #d0eaff, #66ccff)",
         "linear-gradient(to bottom, #ffe0e0, #ff6666)",
         "linear-gradient(to bottom, #e0ffe0, #66ff66)",
-        "linear-gradient(to bottom, #f0e0ff, #cc66ff)",
+        "linear-gradient(to bottom, #f0e0ff, #cc66ff)"
       ];
-      const index = (level - 1) % bg.length;
-      canvas.style.background = bg[index];
+      canvas.style.background = bg[(level - 1) % bg.length];
     }
 
     function draw() {
@@ -291,19 +338,13 @@
     let soundUnlocked = false;
     function unlockSound() {
       if (!soundUnlocked) {
-        hitSound
-          .play()
-          .then(() => {
-            hitSound.pause();
-            hitSound.currentTime = 0;
-            soundUnlocked = true;
-          })
-          .catch(() => {});
+        hitSound.play().then(() => {
+          hitSound.pause();
+          hitSound.currentTime = 0;
+          soundUnlocked = true;
+        }).catch(() => {});
       }
     }
-
-    document.addEventListener("keydown", unlockSound);
-    document.addEventListener("touchstart", unlockSound);
 
     changeBackground(level);
     draw();
